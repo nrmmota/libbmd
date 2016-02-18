@@ -126,9 +126,32 @@ CaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame  *v_frame,
 
     // Handle Video Frame
     if (v_frame) {
+        v_frame->GetBytes((void **)&frame_bytes);
+
         if (v_frame->GetFlags() & bmdFrameHasNoInputSource) {
         // log
-            return S_OK;
+
+            unsigned bars[8] = {
+                0xEA80EA80, 0xD292D210, 0xA910A9A5, 0x90229035,
+                0x6ADD6ACA, 0x51EF515A, 0x286D28EF, 0x10801080 };
+            int width  = v_frame->GetWidth();
+            int height = v_frame->GetHeight();
+            unsigned *p = (unsigned *)frame_bytes;
+
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x += 2)
+                    *p++ = bars[(x * 8) / width];
+            }
+
+            v_frame->GetStreamTime(&timestamp, &duration, timebase);
+
+            video_cb(ctx, frame_bytes,
+                 width,
+                 height,
+                 v_frame->GetRowBytes(),
+                 timestamp,
+                 duration, 0);
+
         } else {
             v_frame->GetBytes((void **)&frame_bytes);
             v_frame->GetStreamTime(&timestamp, &duration, timebase);
